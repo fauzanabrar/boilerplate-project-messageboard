@@ -11,6 +11,7 @@ const runner            = require('./test-runner');
 const app = express();
 
 const helmet = require('helmet')
+const mongoose = require('mongoose')
 
 app.use('/public', express.static(process.cwd() + '/public'));
 
@@ -30,6 +31,8 @@ app.use(helmet({
     action: 'sameorigin'
   }
 }))
+
+mongoose.connect(process.env.MONGO_URI, {useNewUrlParser: true})
 
 //Sample front-end
 app.route('/b/:board/')
