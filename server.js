@@ -20,7 +20,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(helmet({
-  dnsPrefetchControl: false,
+  dnsPrefetchControl: {
+    allow: false
+  },
   referrerPolicy: {
     policy: 'same-origin'
   },
