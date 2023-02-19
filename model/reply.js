@@ -17,4 +17,6 @@ const replySchema = new mongoose.Schema({
   }
 })
 
-module.exports = mongoose.model('Reply', replySchema)
+const Reply = mongoose.model('Reply', replySchema)
+
+module.exports = {replySchema, Reply}

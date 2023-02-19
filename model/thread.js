@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
+const mongo = require('mongodb')
 
-const Reply = require('./reply')
+const {replySchema} = require('./reply')
 
 const threadSchema = new mongoose.Schema({
   bumped_on: Date,
@@ -17,7 +18,9 @@ const threadSchema = new mongoose.Schema({
   board_id: {
     type: String,
     required: true
-  }
+  },
+  replies: [replySchema],
+  replycount: Number
 })
 
 module.exports = mongoose.model('Thread', threadSchema)
