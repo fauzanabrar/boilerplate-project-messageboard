@@ -18,31 +18,25 @@ module.exports = function (app) {
       
       if(b) {
         const t = await Thread.find({ board_id: b._id })
-                              .limit(10)
-                              .select('-delete_password -board_id -reported -replies.delete_password -replies.thread_id -replies.reported')
-                              .slice('replies', 0, 3).exec()
+          .limit(10)
+          .sort({bumped_on: 'desc'})
+          .select('-delete_password -board_id -reported -__v')
+          .slice('replies', [0, 3])
         
-        console.log("disini kah?",t)
-        // if (t.length !== 0) {
-        //   for (let i of t) {
-        //     // let replies = []
-        //     // let r = await Reply.find({thread_id: t._id},'-delete_password -thread_id -reported').limit(3)
-        //     // if (r.length !== 0) {
-        //     //   replies = r
-        //     // }
-        //     result.push({
-        //       _id: i._id,
-        //       bumped_on: i.bumped_on,
-        //       created_on: i.created_on,
-        //       text: i.text,
-        //       replies: i.replies,
-        //       replycount: i.replycount
-        //     })
-        //   }
-        // }
-
-        
-        return res.json(t)
+        result = t.map(doc => {
+          if (doc.replies) {
+            if (doc.replies.length > 3) {
+              doc.replies.length = 3
+            }
+            doc.replies.forEach(item => {
+              delete item["delete_password"]
+              delete item["reported"]
+              delete item["thread_id"]
+              delete item["__v"]
+            })
+            return doc
+          }
+        })
       }
       
       return res.json(result)
@@ -122,26 +116,23 @@ module.exports = function (app) {
       const thread_id = req.query.thread_id
 
       try {
-	      let new_thread = await Thread.findOne({ _id: thread_id }).select('-delete_password -board_id -reported -replies.delete_password -replies.thread_id -replies.reported')
+        let new_thread = await Thread.find({ _id: thread_id })
+          .select('-delete_password -board_id -reported')
+          
+        
+        // let result = new_thread.map(doc => {
+        //   if (doc.replies) {
+        //     doc.replies.forEach(item => {
+        //       delete item["delete_password"]
+        //       delete item["reported"]
+        //       delete item["thread_id"]
+        //       delete item["__v"]
+        //     })
+        //   }
+        // })
         
         return res.json(new_thread)
-	      // if (!new_thread) return console.log("Error new thread")
-	
-	      // let replies = await Reply.find({ thread_id },'-delete_password -thread_id -reported')
-	
-	      // if (!replies) {
-        //   replies = []
-	      // }
-	
-	      // let result = {
-	      //   _id: thread_id,
-	      //   text: new_thread.text,
-	      //   bumped_on: new_thread.bumped_on,
-	      //   created_on: new_thread.created_on,
-	      //   replies
-	      // }
-	
-	      // return res.json(result)
+	     
       } catch (error) {
         console.log(error)
         return res.send("error")
@@ -204,14 +195,18 @@ module.exports = function (app) {
 
       try {
 	
-	      let reply = await Reply.findOne({ _id:reply_id, thread_id })
+	      let reply = await Reply.findOneAndUpdate({ _id:reply_id, thread_id, delete_password }, {text: "[deleted]"})
 	      
-	      if (delete_password !== reply.delete_password) {
+	      // if (delete_password !== reply.delete_password) {
+	        
+	      //   return res.send("incorrect password")
+	      // }
+	      if (!reply) {
 	        
 	        return res.send("incorrect password")
 	      }
 	      
-	      let delete_reply = await Reply.findOneAndUpdate({ _id: reply_id, thread_id }, {text: "[deleted]"})
+	      // let delete_reply = await Reply.findOneAndUpdate({ _id: reply_id, thread_id }, {text: "[deleted]"})
 	
       } catch (error) {
         console.log(error)
