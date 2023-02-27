@@ -79,4 +79,11 @@ const listener = app.listen(process.env.PORT || 3000, function () {
   }
 });
 
+listener.on('close', () => {
+  mongoose.connection.close(() => {
+    console.log('Mongoose connection closed due to server shutdown');
+    process.exit(0);
+  });
+});
+
 module.exports = app; //for testing

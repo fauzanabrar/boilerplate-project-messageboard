@@ -20,11 +20,12 @@ module.exports = function (app) {
         const t = await Thread.find({ board_id: b._id })
           .limit(10)
           .sort({bumped_on: 'desc'})
-          .select('-delete_password -board_id -reported -__v')
-          .slice('replies', [0, 3])
+          .select('-delete_password -board_id -reported -__v').lean()
         
         result = t.map(doc => {
           if (doc.replies) {
+            doc.replies.sort((a, b) => new Date(b.created_on) - new Date(a.created_on))
+            
             if (doc.replies.length > 3) {
               doc.replies.length = 3
             }
@@ -34,6 +35,7 @@ module.exports = function (app) {
               delete item["thread_id"]
               delete item["__v"]
             })
+
             return doc
           }
         })
@@ -76,7 +78,7 @@ module.exports = function (app) {
       }
 
 
-      return res.redirect(`/b/${board}/`)
+      return res.redirect(`/b/${board}`)
     })
     .put(async (req, res) => {
       const board = req.params.board
@@ -116,25 +118,28 @@ module.exports = function (app) {
       const thread_id = req.query.thread_id
 
       try {
-        let new_thread = await Thread.find({ _id: thread_id })
-          .select('-delete_password -board_id -reported')
-          
+        let new_thread = await Thread.findOne({ _id: thread_id })
+          .select('-delete_password -board_id -reported -__v').lean()
+
+        let result = new_thread
+        result = {
+          ...result,
+          replies: result.replies.map(rep => {
+            delete rep["delete_password"]
+              delete rep["reported"]
+              delete rep["thread_id"]
+            delete rep["__v"]
+            return rep
+          })
+        }
+        if(result.replies.length >= 2){
+          result.replies.sort((a,b)=> new Date(a.created_on) - new Date(b.created_on))
+        }
         
-        // let result = new_thread.map(doc => {
-        //   if (doc.replies) {
-        //     doc.replies.forEach(item => {
-        //       delete item["delete_password"]
-        //       delete item["reported"]
-        //       delete item["thread_id"]
-        //       delete item["__v"]
-        //     })
-        //   }
-        // })
-        
-        return res.json(new_thread)
+        return res.json(result)
 	     
       } catch (error) {
-        console.log(error)
+        console.log("erorr why?",error)
         return res.send("error")
       }
     })
@@ -145,7 +150,6 @@ module.exports = function (app) {
       const delete_password = req.body.delete_password
 
       const currentDate = new Date().toISOString()
-
       const newReply = {
         text,
         thread_id,
@@ -155,8 +159,11 @@ module.exports = function (app) {
       }
       try {
 	
-	      let new_reply = await Reply.findOneAndUpdate({ thread_id }, newReply, { upsert: true, new: true })
-        
+        let new_reply = new Reply(newReply)
+
+        await new_reply.save()
+
+
         let new_thread = await Thread.findOneAndUpdate(
           { _id: thread_id }, 
           { 
@@ -195,23 +202,21 @@ module.exports = function (app) {
 
       try {
 	
-	      let reply = await Reply.findOneAndUpdate({ _id:reply_id, thread_id, delete_password }, {text: "[deleted]"})
+	      let reply = await Reply.findOneAndUpdate({ _id:reply_id, delete_password }, {$set:{'text': "[deleted]"}}, {new: true})
 	      
-	      // if (delete_password !== reply.delete_password) {
-	        
-	      //   return res.send("incorrect password")
-	      // }
 	      if (!reply) {
-	        
 	        return res.send("incorrect password")
 	      }
+
+        let thread = await Thread.findOne({_id: thread_id})
+        let r = thread.replies.id(reply_id)
+        r.text = "[deleted]"
+        await thread.save()
 	      
-	      // let delete_reply = await Reply.findOneAndUpdate({ _id: reply_id, thread_id }, {text: "[deleted]"})
 	
       } catch (error) {
         console.log(error)
       }
-
       return res.send("success")
     });
 

@@ -15,7 +15,7 @@ const replySchema = new mongoose.Schema({
     type: String,
     required: true
   }
-})
+}, { autoMarkModified: true })
 
 const Reply = mongoose.model('Reply', replySchema)
 

@@ -21,6 +21,6 @@ const threadSchema = new mongoose.Schema({
   },
   replies: [replySchema],
   replycount: Number
-})
+}, { autoMarkModified: true })
 
 module.exports = mongoose.model('Thread', threadSchema)
